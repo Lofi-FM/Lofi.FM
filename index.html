@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lofi FM</title>
+  <meta name="theme-color" content="#0ea5a4">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <meta name="description" content="A soothing, chill Lofi FM with rain and vinyl layers.">
+  <style>
+    /* Critical CSS: background + layout */
+    :root {
+      --bg1: #0ea5a4;
+      --bg2: #663399;
+      --bg3: #f59e0b;
+      --card: rgba(255,255,255,0.08);
+      --card2: rgba(0,0,0,0.3);
+      --text: #f6f7fb;
+      --muted: #cfd5e3;
+      --accent: #86efac;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 10% 20%, var(--bg1), transparent 60%),
+                  radial-gradient(1200px 800px at 90% 30%, var(--bg2), transparent 60%),
+                  radial-gradient(1200px 800px at 50% 80%, var(--bg3), transparent 60%),
+                  #0b1021;
+      background-attachment: fixed;
+      overflow: hidden;
+    }
+    /* animated shimmer */
+    .glow {
+      position: fixed; inset: -20vmax;
+      background: conic-gradient(from 0deg, rgba(255,255,255,0.1), transparent 30%, rgba(255,255,255,0.1) 60%, transparent 90%);
+      filter: blur(80px) saturate(1.2);
+      animation: spin 24s linear infinite;
+      opacity: .3;
+      pointer-events: none;
+    }
+    @keyframes spin { to { transform: rotate(1turn); } }
+
+    .wrap {
+      position: relative;
+      height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: min(780px, 92vw);
+      background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04));
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 22px;
+    }
+
+    .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .row.space { justify-content: space-between; }
+    .title {
+      display:flex; align-items:center; gap:12px;
+      font-weight: 700; letter-spacing: .2px;
+    }
+    .badge { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,0.1); font-size: 12px; color: var(--muted); }
+    .meta { color: var(--muted); font-size: 14px; line-height: 1.4; }
+    .big {
+      display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 12px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 680px) {
+      .controls { grid-template-columns: 1fr 1fr; }
+    }
+
+    button, .slider {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      background: var(--card);
+      color: var(--text);
+      padding: 14px 16px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform .06s ease, background .2s ease, border-color .2s ease;
+    }
+    button:hover { transform: translateY(-1px); background: rgba(255,255,255,0.14); }
+    button:active { transform: translateY(0); }
+
+    .primary { background: linear-gradient(180deg, #14b8a6, #0ea5a4); border-color: rgba(255,255,255,0.22); }
+    .primary:hover { background: linear-gradient(180deg, #10b49f, #0d9b9a); }
+
+    .slider {
+      height: 46px; display:flex; align-items:center; gap:12px; padding-inline: 14px;
+    }
+    .slider input[type="range"] {
+      width: 100%;
+      -webkit-appearance: none; appearance: none; height: 4px; border-radius: 999px;
+      background: rgba(255,255,255,0.25);
+    }
+    .slider input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance:none; appearance:none;
+      width:16px; height:16px; border-radius:50%;
+      background: #fff;
+      border: 2px solid #0ea5a4;
+    }
+    .slider label { width: 70px; font-size: 13px; color: var(--muted); }
+
+    .pill {
+      display:flex; align-items:center; gap:10px;
+      padding: 10px 12px; border-radius: 12px;
+      background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1);
+      font-size: 13px; color: var(--muted);
+    }
+
+    .footer {
+      display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:10px;
+      color: var(--muted); font-size:12px;
+    }
+    .nowrap { white-space: nowrap; }
+  </style>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="row space">
+        <div class="title">
+          <img src="assets/icon-192.png" alt="" width="32" height="32" style="border-radius:8px">
+          <div>
+            <div style="font-size:20px">Lofi FM</div>
+            <div class="meta" id="track">Connecting…</div>
+          </div>
+        </div>
+        <div class="pill"><span id="statusDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b"></span> <span id="status">Idle</span></div>
+      </div>
+
+      <div class="big">
+        <div class="controls">
+          <button id="btnPlay" class="primary">Play</button>
+          <button id="btnRain">Rain: Off</button>
+          <button id="btnVinyl">Vinyl: Off</button>
+          <button id="btnMute">Mute</button>
+
+          <div class="slider"><label>Main</label><input id="volMain" type="range" min="0" max="1" step="0.01" value="0.9"></div>
+          <div class="slider"><label>Rain</label><input id="volRain" type="range" min="0" max="1" step="0.01" value="0.5"></div>
+          <div class="slider"><label>Vinyl</label><input id="volVinyl" type="range" min="0" max="1" step="0.01" value="0.35"></div>
+          <div class="slider"><label>Master</label><input id="volMaster" type="range" min="0" max="1" step="0.01" value="1"></div>
+        </div>
+
+        <div class="row space">
+          <div class="meta">Tip: layer rain & vinyl for comfy vibes. Install the app for a one-tap radio.</div>
+          <div class="row">
+            <button id="btnInstall" style="display:none">Install App</button>
+            <span class="badge nowrap" id="liveBadge">LIVE</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div>Now playing: <span id="metaArtist">—</span> — <span id="metaTitle">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <audio id="radio" crossorigin="anonymous" preload="none"></audio>
+  <script src="app.js"></script>
+</body>
+</html>
