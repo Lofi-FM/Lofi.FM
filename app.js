@@ -76,13 +76,13 @@ function stopNode(nodeSetter) {
   if (n) try { n.stop(); } catch {}
   nodeSetter(null);
 }
-
+/*
 function setupSFX() {
   // preload both buffers
   loadLoop('assets/rain_loop.wav').then(b => { rainBuffer = b; }).catch(()=>{});
   loadLoop('assets/vinyl_loop.wav').then(b => { vinylBuffer = b; }).catch(()=>{});
 }
-
+*/
 function toggleRain() {
   if (!ctx) initAudio();
   if (rainNode) {
@@ -217,7 +217,7 @@ function pwa() {
 window.addEventListener('DOMContentLoaded', () => {
   bindUI();
   pwa();
-  setupSFX();
+ /* setupSFX(); */
   startMetadata();
 
   els.radio.addEventListener('play', () => setStatus('Playing', '#22c55e'));
