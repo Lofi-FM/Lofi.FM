@@ -7,13 +7,11 @@ const streams = {
 const els = {
   radio: document.getElementById('radio'),
   btnPlay: document.getElementById('btnPlay'),
-  btnMute: document.getElementById('btnMute'),
   btnRain: document.getElementById('btnRain'),
   btnVinyl: document.getElementById('btnVinyl'),
   volMain: document.getElementById('volMain'),
   volRain: document.getElementById('volRain'),
   volVinyl: document.getElementById('volVinyl'),
-  volMaster: document.getElementById('volMaster'),
   status: document.getElementById('status'),
   statusDot: document.getElementById('statusDot'),
   track: document.getElementById('track'),
@@ -22,31 +20,26 @@ const els = {
   btnInstall: document.getElementById('btnInstall'),
 };
 
-let ctx, mainGain, masterGain, rainGain, vinylGain;
-let rainBuffer, vinylBuffer;
-let rainNode, vinylNode;
+let ctx, mainGain, rainGain, vinylGain;
+let sfxBuffers = {};
+let rainSource = null;
+let vinylSource = null;
 
+// --- Audio Context ---
 function initAudio() {
   if (ctx) return;
   ctx = new (window.AudioContext || window.webkitAudioContext)();
-  masterGain = ctx.createGain();
-  masterGain.gain.value = parseFloat(els.volMaster.value);
 
+  // Gains
   mainGain = ctx.createGain();
-  mainGain.gain.value = parseFloat(els.volMain.value);
-
   rainGain = ctx.createGain();
-  rainGain.gain.value = parseFloat(els.volRain.value);
-
   vinylGain = ctx.createGain();
-  vinylGain.gain.value = parseFloat(els.volVinyl.value);
 
-  masterGain.connect(ctx.destination);
-  mainGain.connect(masterGain);
-  rainGain.connect(masterGain);
-  vinylGain.connect(masterGain);
+  mainGain.connect(ctx.destination);
+  rainGain.connect(ctx.destination);
+  vinylGain.connect(ctx.destination);
 
-  // connect radio element
+  // Radio through mainGain
   const src = ctx.createMediaElementSource(els.radio);
   src.connect(mainGain);
 }
@@ -56,67 +49,57 @@ function setStatus(text, color) {
   if (color) els.statusDot.style.background = color;
 }
 
-async function loadLoop(url) {
-  const res = await fetch(url);
-  const arr = await res.arrayBuffer();
-  return await (ctx.decodeAudioData(arr));
+// --- SFX (Rain + Vinyl) ---
+async function setupSFX() {
+  if (!ctx) initAudio(); // reuse same context
+
+  async function loadSFX(name, url) {
+    const res = await fetch(url);
+    const arr = await res.arrayBuffer();
+    sfxBuffers[name] = await ctx.decodeAudioData(arr);
+  }
+
+  await Promise.all([
+    loadSFX("rain", "assets/rain.wav"),
+    loadSFX("vinyl", "assets/vinyl.wav"),
+  ]);
 }
 
-function startLoop(buffer, gainNode, setter) {
-  const node = ctx.createBufferSource();
-  node.buffer = buffer;
-  node.loop = true;
-  node.connect(gainNode);
-  node.start();
-  setter(node);
+function playLoop(name, gainNode) {
+  if (!sfxBuffers[name]) return null;
+  const src = ctx.createBufferSource();
+  src.buffer = sfxBuffers[name];
+  src.loop = true;
+  src.connect(gainNode);
+  src.start(0);
+  return src;
 }
 
-function stopNode(nodeSetter) {
-  const n = nodeSetter();
-  if (n) try { n.stop(); } catch {}
-  nodeSetter(null);
-}
-/*
-function setupSFX() {
-  // preload both buffers
-  loadLoop('assets/rain_loop.wav').then(b => { rainBuffer = b; }).catch(()=>{});
-  loadLoop('assets/vinyl_loop.wav').then(b => { vinylBuffer = b; }).catch(()=>{});
-}
-*/
 function toggleRain() {
-  if (!ctx) initAudio();
-  if (rainNode) {
-    try { rainNode.stop(); } catch {}
-    rainNode = null;
-    els.btnRain.textContent = 'Rain: Off';
-  } else if (rainBuffer) {
-    const n = ctx.createBufferSource();
-    n.buffer = rainBuffer;
-    n.loop = true;
-    n.connect(rainGain);
-    n.start();
-    rainNode = n;
-    els.btnRain.textContent = 'Rain: On';
+  if (rainSource) {
+    rainSource.stop();
+    rainSource.disconnect();
+    rainSource = null;
+    els.btnRain.textContent = "Rain: Off";
+  } else {
+    rainSource = playLoop("rain", rainGain);
+    els.btnRain.textContent = "Rain: On";
   }
 }
 
 function toggleVinyl() {
-  if (!ctx) initAudio();
-  if (vinylNode) {
-    try { vinylNode.stop(); } catch {}
-    vinylNode = null;
-    els.btnVinyl.textContent = 'Vinyl: Off';
-  } else if (vinylBuffer) {
-    const n = ctx.createBufferSource();
-    n.buffer = vinylBuffer;
-    n.loop = true;
-    n.connect(vinylGain);
-    n.start();
-    vinylNode = n;
-    els.btnVinyl.textContent = 'Vinyl: On';
+  if (vinylSource) {
+    vinylSource.stop();
+    vinylSource.disconnect();
+    vinylSource = null;
+    els.btnVinyl.textContent = "Vinyl: Off";
+  } else {
+    vinylSource = playLoop("vinyl", vinylGain);
+    els.btnVinyl.textContent = "Vinyl: On";
   }
 }
 
+// --- UI Bindings ---
 function bindUI() {
   els.btnPlay.addEventListener('click', async () => {
     initAudio();
@@ -138,22 +121,15 @@ function bindUI() {
     }
   });
 
-  els.btnMute.addEventListener('click', () => {
-    if (!ctx) initAudio();
-    const muted = masterGain.gain.value === 0;
-    masterGain.gain.value = muted ? parseFloat(els.volMaster.value) : 0;
-    els.btnMute.textContent = muted ? 'Mute' : 'Unmute';
-  });
-
   els.btnRain.addEventListener('click', toggleRain);
   els.btnVinyl.addEventListener('click', toggleVinyl);
 
-  els.volMain.addEventListener('input', e => mainGain && (mainGain.gain.value = parseFloat(e.target.value)));
-  els.volRain.addEventListener('input', e => rainGain && (rainGain.gain.value = parseFloat(e.target.value)));
-  els.volVinyl.addEventListener('input', e => vinylGain && (vinylGain.gain.value = parseFloat(e.target.value)));
-  els.volMaster.addEventListener('input', e => masterGain && (masterGain.gain.value = parseFloat(e.target.value)));
+  els.volMain.addEventListener('input', e => { if(mainGain) mainGain.gain.value = parseFloat(e.target.value); });
+  els.volRain.addEventListener('input', e => { if(rainGain) rainGain.gain.value = parseFloat(e.target.value); });
+  els.volVinyl.addEventListener('input', e => { if(vinylGain) vinylGain.gain.value = parseFloat(e.target.value); });
 }
 
+// --- Media Session ---
 function mediaSessionUpdate(artist, title) {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -169,14 +145,13 @@ function mediaSessionUpdate(artist, title) {
   }
 }
 
-// Metadata via SSE
+// --- Metadata via SSE ---
 function startMetadata() {
   try {
     const es = new EventSource(streams.metadata);
     es.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
-        // shape: { mount: { now_playing: { title, artist } } } or similar
         const np = data?.now_playing || data?.mount?.now_playing || data;
         const artist = np?.artist || np?.stream_title?.split(' - ')?.[0] || '';
         const title = np?.title || np?.stream_title?.split(' - ')?.[1] || np?.stream_title || '';
@@ -186,16 +161,10 @@ function startMetadata() {
         mediaSessionUpdate(artist, title);
       } catch {}
     };
-    es.onerror = () => {
-      // fallback: ping title from audio tag if ICE metadata appears (rare in MSE)
-      // Keep UI functional even if metadata endpoint blocks CORS.
-    };
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
 }
 
-// PWA: service worker + install prompt
+// --- PWA Support ---
 function pwa() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js');
@@ -213,11 +182,11 @@ function pwa() {
   });
 }
 
-// Boot
+// --- Boot ---
 window.addEventListener('DOMContentLoaded', () => {
   bindUI();
   pwa();
- /* setupSFX(); */
+  setupSFX();
   startMetadata();
 
   els.radio.addEventListener('play', () => setStatus('Playing', '#22c55e'));

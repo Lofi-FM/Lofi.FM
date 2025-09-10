@@ -1,6 +1,6 @@
 {
-  "name": "Lofi FM",
-  "short_name": "Lofi FM",
+  "name": "Lofi.FM",
+  "short_name": "Lofi.FM",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0b1021",

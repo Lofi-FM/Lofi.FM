@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lofi FM</title>
+  <title>Lofi.FM</title>
   <meta name="theme-color" content="#0ea5a4">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon-192.png" sizes="192x192">
@@ -12,9 +12,9 @@
   <style>
     /* Critical CSS: background + layout */
     :root {
-      --bg1: #0ea5a4;
-      --bg2: #663399;
-      --bg3: #f59e0b;
+      --bg1: #4d076d;
+      --bg2: #080072;
+      --bg3: #b97500;
       --card: rgba(255,255,255,0.08);
       --card2: rgba(0,0,0,0.3);
       --text: #f6f7fb;
@@ -30,6 +30,8 @@
       background: radial-gradient(1200px 800px at 10% 20%, var(--bg1), transparent 60%),
                   radial-gradient(1200px 800px at 90% 30%, var(--bg2), transparent 60%),
                   radial-gradient(1200px 800px at 50% 80%, var(--bg3), transparent 60%),
+                  radial-gradient(1200px 800px at 30% 70%, #b33e73, transparent 60%),
+                  radial-gradient(1200px 800px at 80% 20%, #0096a1, transparent 60%),
                   #0b1021;
       background-attachment: fixed;
       overflow: hidden;
@@ -50,9 +52,13 @@
       height: 100dvh;
       display: grid;
       place-items: center;
-      padding: 24px;
     }
 
+      @media (min-width: 1024px) {
+  .wrap {
+      padding: 24px;
+  }
+}
     .card {
       width: min(780px, 92vw);
       background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04));
@@ -76,14 +82,26 @@
       display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 12px;
     }
 
-    .controls {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 680px) {
-      .controls { grid-template-columns: 1fr 1fr; }
-    }
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sliders {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 680px) {
+  .sliders { grid-template-columns: 1fr; }
+}
 
     button, .slider {
       appearance: none;
@@ -139,32 +157,35 @@
     <div class="card">
       <div class="row space">
         <div class="title">
-          <img src="assets/icon-192.png" alt="" width="32" height="32" style="border-radius:8px">
+          <img src="assets/icon-HD.png" alt="" width="50" height="50">
           <div>
             <div style="font-size:20px">Lofi FM</div>
-            <div class="meta" id="track">v-beta0.3</div>
+            <div class="meta" id="track">v1.0</div>
           </div>
         </div>
         <div class="pill"><span id="statusDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b"></span> <span id="status">Idle</span></div>
       </div>
 
       <div class="big">
-        <div class="controls">
-          <button id="btnPlay" class="primary">Play</button>
-          <button id="btnRain">Rain: Broken</button>
-          <button id="btnVinyl">Vinyl: Broken</button>
-          <button id="btnMute">Mute</button>
+<div class="controls">
+  <div class="buttons">
+    <button id="btnPlay" class="primary">Play</button>
+    <button id="btnRain">Rain: Off</button>
+    <button id="btnVinyl">Vinyl: Off</button>
+  </div>
 
-          <div class="slider"><label>Main</label><input id="volMain" type="range" min="0" max="1" step="0.01" value="0.9"></div>
-          <div class="slider"><label>Not Implemented</label><input id="volRain" type="range" min="0" max="1" step="0.01" value="0.5"></div>
-          <div class="slider"><label>Not Implemented</label><input id="volVinyl" type="range" min="0" max="1" step="0.01" value="0.35"></div>
-          <div class="slider"><label>Master</label><input id="volMaster" type="range" min="0" max="1" step="0.01" value="1"></div>
-        </div>
+  <div class="sliders">
+    <div class="slider"><label>Main</label><input id="volMain" type="range" min="0" max="1" step="0.01" value="0.6"></div>
+    <div class="slider"><label>Rain</label><input id="volRain" type="range" min="0" max="1" step="0.01" value="0.3"></div>
+    <div class="slider"><label>Vinyl</label><input id="volVinyl" type="range" min="0" max="1" step="0.01" value="0.8"></div>
+  </div>
+</div>
+
 
         <div class="row space">
-          <div class="meta">This is a BETA Version! so most of the features do not work.</div>
           <div class="row">
             <button id="btnInstall" style="display:none">Install App</button>
+            
           </div>
         </div>
       </div>

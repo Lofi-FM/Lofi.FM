@@ -6,10 +6,7 @@ button:focus-visible, input:focus-visible {
   box-shadow: 0 0 0 4px var(--ring);
   transition: box-shadow .15s ease;
 }
-#liveBadge {
-  color: #111; background: #22c55e; border-radius: 999px; padding: 6px 10px; font-weight: 800;
-  animation: pulse 1.6s infinite;
-}
+
 @keyframes pulse {
   0%,100% { filter: brightness(1.0); transform: translateZ(0); }
   50% { filter: brightness(1.2); transform: scale(1.03); }
