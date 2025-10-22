@@ -15,8 +15,6 @@ const els = {
   status: document.getElementById('status'),
   statusDot: document.getElementById('statusDot'),
   track: document.getElementById('track'),
-  metaArtist: document.getElementById('metaArtist'),
-  metaTitle: document.getElementById('metaTitle'),
   btnInstall: document.getElementById('btnInstall'),
 };
 
@@ -24,6 +22,7 @@ let ctx, mainGain, rainGain, vinylGain;
 let sfxBuffers = {};
 let rainSource = null;
 let vinylSource = null;
+let radioSource = null;
 
 // --- Audio Context ---
 function initAudio() {
@@ -39,9 +38,11 @@ function initAudio() {
   rainGain.connect(ctx.destination);
   vinylGain.connect(ctx.destination);
 
-  // Radio through mainGain
-  const src = ctx.createMediaElementSource(els.radio);
-  src.connect(mainGain);
+  // Radio through mainGain (only create once)
+  if (!radioSource) {
+    radioSource = ctx.createMediaElementSource(els.radio);
+    radioSource.connect(mainGain);
+  }
 }
 
 function setStatus(text, color) {
@@ -103,6 +104,17 @@ function toggleVinyl() {
 function bindUI() {
   els.btnPlay.addEventListener('click', async () => {
     initAudio();
+    
+    // Resume audio context if suspended (required for autoplay policies)
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
+    
+    // Initialize volume controls
+    if (mainGain) {
+      mainGain.gain.value = parseFloat(els.volMain.value);
+    }
+    
     if (els.radio.src !== streams.main) {
       els.radio.src = streams.main;
     }
@@ -155,8 +167,6 @@ function startMetadata() {
         const np = data?.now_playing || data?.mount?.now_playing || data;
         const artist = np?.artist || np?.stream_title?.split(' - ')?.[0] || '';
         const title = np?.title || np?.stream_title?.split(' - ')?.[1] || np?.stream_title || '';
-        els.metaArtist.textContent = artist || 'Unknown';
-        els.metaTitle.textContent = title || '—';
         els.track.textContent = (artist && title) ? artist + ' — ' + title : (title || '—');
         mediaSessionUpdate(artist, title);
       } catch {}
@@ -186,6 +196,7 @@ function pwa() {
 window.addEventListener('DOMContentLoaded', () => {
   bindUI();
   pwa();
+  initAudio(); // Initialize audio context on page load
   setupSFX();
   startMetadata();
 
