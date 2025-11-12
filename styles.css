@@ -111,8 +111,39 @@
   grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
 }
+
+.prefix {
+  font-weight: bold;
+  color: rgb(34, 197, 94); /* or your accent color */
+}
+
+#track {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#track.show {
+  opacity: 1;
+}
+
+#track .prefix {
+  font-weight: bold;
+  color: #22c55e; /* default “Now Playing” color */
+}
+
+#track.paused .prefix {
+  color: #f59e0b; /* “Paused” color */
+}
+
+
+
 @media (max-width: 680px) {
   .sliders { grid-template-columns: 1fr; }
+    .meta {
+      position: fixed;
+      top: 60px;
+      left: 12px;
+    }
 }
 
     button, .slider {
@@ -160,6 +191,7 @@
       color: var(--muted); font-size:12px;
     }
     .nowrap { white-space: nowrap; }
+
 
 button:focus-visible, input:focus-visible {
   outline: 0;

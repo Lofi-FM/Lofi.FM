@@ -29,7 +29,6 @@ function initAudio() {
   if (ctx) return;
   ctx = new (window.AudioContext || window.webkitAudioContext)();
 
-  // Gains
   mainGain = ctx.createGain();
   rainGain = ctx.createGain();
   vinylGain = ctx.createGain();
@@ -38,7 +37,6 @@ function initAudio() {
   rainGain.connect(ctx.destination);
   vinylGain.connect(ctx.destination);
 
-  // Radio through mainGain (only create once)
   if (!radioSource) {
     radioSource = ctx.createMediaElementSource(els.radio);
     radioSource.connect(mainGain);
@@ -52,7 +50,7 @@ function setStatus(text, color) {
 
 // --- SFX (Rain + Vinyl) ---
 async function setupSFX() {
-  if (!ctx) initAudio(); // reuse same context
+  if (!ctx) initAudio();
 
   async function loadSFX(name, url) {
     const res = await fetch(url);
@@ -105,25 +103,18 @@ function bindUI() {
   els.btnPlay.addEventListener('click', async () => {
     initAudio();
     
-    // Resume audio context if suspended (required for autoplay policies)
-    if (ctx.state === 'suspended') {
-      await ctx.resume();
-    }
+    if (ctx.state === 'suspended') await ctx.resume();
     
-    // Initialize volume controls
-    if (mainGain) {
-      mainGain.gain.value = parseFloat(els.volMain.value);
-    }
+    if (mainGain) mainGain.gain.value = parseFloat(els.volMain.value);
     
-    if (els.radio.src !== streams.main) {
-      els.radio.src = streams.main;
-    }
+    if (els.radio.src !== streams.main) els.radio.src = streams.main;
+    
     if (els.radio.paused) {
       try {
         await els.radio.play();
         els.btnPlay.textContent = 'Pause';
         setStatus('Playing', '#22c55e');
-      } catch (err) {
+      } catch {
         setStatus('Tap to start (autoplay blocked)', '#f59e0b');
       }
     } else {
@@ -157,28 +148,90 @@ function mediaSessionUpdate(artist, title) {
   }
 }
 
+// --- WebNowPlaying Support ---
+function updateWebNowPlaying(artist, title, artwork) {
+  if (!window.WebNowPlaying) window.WebNowPlaying = {};
+  
+  window.WebNowPlaying.isPlaying = !els.radio.paused;
+  window.WebNowPlaying.artist = artist || '';
+  window.WebNowPlaying.title = title || '';
+  window.WebNowPlaying.album = '';
+  window.WebNowPlaying.duration = 0;
+  window.WebNowPlaying.currentTime = 0;
+  window.WebNowPlaying.playbackRate = 1;
+  window.WebNowPlaying.artwork = artwork || ['assets/icon-192.png'];
+  
+  window.dispatchEvent(new CustomEvent('WebNowPlayingUpdated', { detail: window.WebNowPlaying }));
+}
+
 // --- Metadata via SSE ---
-function startMetadata() {
-  try {
-    const es = new EventSource(streams.metadata);
-    es.onmessage = (ev) => {
-      try {
-        const data = JSON.parse(ev.data);
-        const np = data?.now_playing || data?.mount?.now_playing || data;
-        const artist = np?.artist || np?.stream_title?.split(' - ')?.[0] || '';
-        const title = np?.title || np?.stream_title?.split(' - ')?.[1] || np?.stream_title || '';
-        els.track.textContent = (artist && title) ? artist + ' — ' + title : (title || '—');
-        mediaSessionUpdate(artist, title);
-      } catch {}
-    };
-  } catch (e) {}
+function startMetadata(pausedColor = '#f59e0b') {
+  let latestContent = '';
+  let showing = false;
+
+  const es = new EventSource(streams.metadata);
+
+  es.onmessage = (ev) => {
+    try {
+      const data = JSON.parse(ev.data);
+      const streamTitle = data.streamTitle || '';
+      let artist = '', title = '';
+
+      if (streamTitle.includes(' - ')) [artist, title] = streamTitle.split(' - ');
+      else title = streamTitle;
+
+      latestContent = (artist && title)
+        ? `<span class="prefix">Now Playing:</span> ${title} — ${artist}`
+        : `<span class="prefix">Now Playing:</span> ${title || '—'}`;
+
+      mediaSessionUpdate(artist, title);
+      updateWebNowPlaying(artist, title);
+
+      if (showing && !els.radio.paused) fadeTrack(latestContent, false);
+
+    } catch (err) {
+      console.error('Failed to parse SSE metadata:', err);
+    }
+  };
+
+  es.onerror = (err) => console.error('SSE error:', err);
+
+  function fadeTrack(content, paused = false) {
+    els.track.classList.remove('show');
+
+    setTimeout(() => {
+      els.track.innerHTML = content;
+      if (paused) els.track.classList.add('paused');
+      else els.track.classList.remove('paused');
+      els.track.classList.add('show');
+    }, 500); // fade duration matches CSS
+  }
+
+  els.radio.addEventListener('playing', () => {
+    if (!showing) showing = true;
+    fadeTrack(latestContent, false);
+
+    // update WebNowPlaying with correct artist/title
+    let artist = '', title = '';
+    if (latestContent.includes(' — ')) {
+      const parts = latestContent.split(' — ');
+      title = parts[0].replace(/<span.*?<\/span>/, '').trim();
+      artist = parts[1] || '';
+    } else title = latestContent.replace(/<span.*?<\/span>/, '').trim();
+
+    updateWebNowPlaying(artist, title);
+  });
+
+  els.radio.addEventListener('pause', () => {
+    fadeTrack(`<span class="prefix">Paused.</span>`, true);
+    updateWebNowPlaying('', 'Paused.');
+  });
 }
 
 // --- PWA Support ---
 function pwa() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
-  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+
   let deferred;
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -196,7 +249,7 @@ function pwa() {
 window.addEventListener('DOMContentLoaded', () => {
   bindUI();
   pwa();
-  initAudio(); // Initialize audio context on page load
+  initAudio();
   setupSFX();
   startMetadata();
 
